@@ -67,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String MULTI_LINGUAL_MODEL_FAST = "whisper-base.tflite";
     public static final String MULTI_LINGUAL_MODEL_SLOW = "whisper-small.tflite";
     public static final String ENGLISH_ONLY_MODEL = "whisper-tiny.en.tflite";
+    public static final String MY_MODEL = "whisper-my.tflite";
     // English only model ends with extension ".en.tflite"
     public static final String ENGLISH_ONLY_MODEL_EXTENSION = ".en.tflite";
     public static final String ENGLISH_ONLY_VOCAB_FILE = "filters_vocab_en.bin";
@@ -156,6 +157,9 @@ public class MainActivity extends AppCompatActivity {
 
         // Call the method to copy specific file types from assets to data folder
         sdcardDataFolder = this.getExternalFilesDir(null);
+        if (sdcardDataFolder != null) {
+            Log.d(TAG, "Model folder: " + sdcardDataFolder.getAbsolutePath());
+        }
 
         ArrayList<File> tfliteFiles = getFilesWithExtension(sdcardDataFolder, ".tflite");
 
@@ -192,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
         spinnerTflite = findViewById(R.id.spnrTfliteFiles);
         spinnerTflite.setAdapter(tfliteAdapter);
         spinnerTflite.setSelection(position,false);
-        if (selectedTfliteFile.getName().equals(MULTI_LINGUAL_EU_MODEL_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_SLOW)){
+        if (selectedTfliteFile.getName().equals(MULTI_LINGUAL_EU_MODEL_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_SLOW) || selectedTfliteFile.getName().equals(MY_MODEL)){
             spinnerLanguage.setEnabled(true);
             String langCode = sp.getString("language", "auto");
             spinnerLanguage.setSelection(languagePairAdapter.getIndexByCode(langCode));
@@ -209,7 +213,7 @@ public class MainActivity extends AppCompatActivity {
                 editor.putString("modelName",selectedTfliteFile.getName());
                 editor.apply();
                 initModel();
-                if (selectedTfliteFile.getName().equals(MULTI_LINGUAL_EU_MODEL_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_SLOW)){
+                if (selectedTfliteFile.getName().equals(MULTI_LINGUAL_EU_MODEL_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_SLOW) || selectedTfliteFile.getName().equals(MY_MODEL)){
                     spinnerLanguage.setEnabled(true);
                     String langCode = sp.getString("language", "auto");
                     spinnerLanguage.setSelection(languagePairAdapter.getIndexByCode(langCode));
@@ -409,20 +413,23 @@ public class MainActivity extends AppCompatActivity {
             public View getView(int position, View convertView, ViewGroup parent) {
                 View view = super.getView(position, convertView, parent);
                 TextView textView = view.findViewById(android.R.id.text1);
-                if ((getItem(position).getName()).equals(MULTI_LINGUAL_MODEL_SLOW))
+                String fileName = getItem(position).getName();
+                if (fileName.equals(MULTI_LINGUAL_MODEL_SLOW))
                     textView.setText(R.string.multi_lingual_slow);
-                else if ((getItem(position).getName()).equals(MULTI_LINGUAL_TOP_WORLD_SLOW))
+                else if (fileName.equals(MULTI_LINGUAL_TOP_WORLD_SLOW))
                     textView.setText(R.string.multi_lingual_slow);
-                else if ((getItem(position).getName()).equals(ENGLISH_ONLY_MODEL))
+                else if (fileName.equals(ENGLISH_ONLY_MODEL))
                     textView.setText(R.string.english_only_fast);
-                else if ((getItem(position).getName()).equals(MULTI_LINGUAL_MODEL_FAST))
+                else if (fileName.equals(MULTI_LINGUAL_MODEL_FAST))
                     textView.setText(R.string.multi_lingual_fast);
-                else if ((getItem(position).getName()).equals(MULTI_LINGUAL_EU_MODEL_FAST))
+                else if (fileName.equals(MULTI_LINGUAL_EU_MODEL_FAST))
                     textView.setText(R.string.multi_lingual_fast);
-                else if ((getItem(position).getName()).equals(MULTI_LINGUAL_TOP_WORLD_FAST))
+                else if (fileName.equals(MULTI_LINGUAL_TOP_WORLD_FAST))
                     textView.setText(R.string.multi_lingual_fast);
+                else if (fileName.equals(MY_MODEL))
+                    textView.setText("My Model");
                 else
-                    textView.setText(getItem(position).getName().substring(0, getItem(position).getName().length() - ".tflite".length()));
+                    textView.setText(fileName.substring(0, fileName.length() - ".tflite".length()));
 
                 return view;
             }
@@ -431,20 +438,23 @@ public class MainActivity extends AppCompatActivity {
             public View getDropDownView(int position, View convertView, ViewGroup parent) {
                 View view = super.getDropDownView(position, convertView, parent);
                 TextView textView = view.findViewById(android.R.id.text1);
-                if ((getItem(position).getName()).equals(MULTI_LINGUAL_MODEL_SLOW))
+                String fileName = getItem(position).getName();
+                if (fileName.equals(MULTI_LINGUAL_MODEL_SLOW))
                     textView.setText(R.string.multi_lingual_slow);
-                else if ((getItem(position).getName()).equals(MULTI_LINGUAL_TOP_WORLD_SLOW))
+                else if (fileName.equals(MULTI_LINGUAL_TOP_WORLD_SLOW))
                     textView.setText(R.string.multi_lingual_slow);
-                else if ((getItem(position).getName()).equals(ENGLISH_ONLY_MODEL))
+                else if (fileName.equals(ENGLISH_ONLY_MODEL))
                     textView.setText(R.string.english_only_fast);
-                else if ((getItem(position).getName()).equals(MULTI_LINGUAL_MODEL_FAST))
+                else if (fileName.equals(MULTI_LINGUAL_MODEL_FAST))
                     textView.setText(R.string.multi_lingual_fast);
-                else if ((getItem(position).getName()).equals(MULTI_LINGUAL_EU_MODEL_FAST))
+                else if (fileName.equals(MULTI_LINGUAL_EU_MODEL_FAST))
                     textView.setText(R.string.multi_lingual_fast);
-                else if ((getItem(position).getName()).equals(MULTI_LINGUAL_TOP_WORLD_FAST))
+                else if (fileName.equals(MULTI_LINGUAL_TOP_WORLD_FAST))
                     textView.setText(R.string.multi_lingual_fast);
+                else if (fileName.equals(MY_MODEL))
+                    textView.setText("My Model");
                 else
-                    textView.setText(getItem(position).getName().substring(0, getItem(position).getName().length() - ".tflite".length()));
+                    textView.setText(fileName.substring(0, fileName.length() - ".tflite".length()));
 
                 return view;
             }
