@@ -3,7 +3,21 @@
     <color name="black">#FF000000</color>
     <color name="lightGrey">#DDDDDD</color>
     <color name="darkGrey">#999999</color>
-    <color name="colorAccent">#996750A4</color>
-    <color name="colorAccentDark">#ff6750A4</color>
-    <color name="windowBackground">#FAFAFA</color>
+    <color name="colorAccent">#3B82F6</color> <!-- Updated to primary_blue -->
+    <color name="colorAccentDark">#2563EB</color> <!-- Updated to primary_blue_dark -->
+    <color name="windowBackground">#EFF6FF</color> <!-- Updated to bg_blue_light -->
+
+    <!-- New Color Palette -->
+    <color name="primary_blue">#3B82F6</color>
+    <color name="primary_blue_dark">#2563EB</color>
+    <color name="bg_blue_light">#EFF6FF</color>
+    
+    <color name="success_green">#10B981</color>
+    <color name="error_red">#EF4444</color>
+    <color name="warning_orange">#F59E0B</color>
+    
+    <color name="text_dark">#1F2937</color>
+    <color name="text_gray">#6B7280</color>
+    <color name="surface_white">#FFFFFF</color>
+    <color name="border_light">#E5E7EB</color>
 </resources>
