@@ -41,6 +41,7 @@ import androidx.core.content.ContextCompat;
 
 import com.github.houbb.opencc4j.util.ZhConverterUtil;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.tabs.TabLayout;
 import com.whispertflite.asr.Recorder;
 import com.whispertflite.asr.Whisper;
@@ -60,6 +61,7 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity {
     private Context mContext;
     private static final String TAG = "MainActivity";
+    private static final String PREF_USERNAME = "collector_username";
 
     public static final String MULTI_LINGUAL_EU_MODEL_FAST = "whisper-base.EUROPEAN_UNION.tflite";
     public static final String MULTI_LINGUAL_TOP_WORLD_FAST = "whisper-base.TOP_WORLD.tflite";
@@ -84,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
     private CheckBox modeTTS;
     private ProgressBar processingBar;
     private ImageButton btnInfo;
+    private MaterialButton btnRelogin;
     private TabLayout navigationTabs;
 
     private Recorder mRecorder = null;
@@ -115,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        updateAccountButtonText();
         if (navigationTabs != null && navigationTabs.getTabCount() > 0) {
             navigationTabs.getTabAt(0).select();
         }
@@ -139,6 +143,20 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onTabSelected(TabLayout.Tab tab) {
                     if (tab.getPosition() == 1) {
+                        if (!isLoggedIn()) {
+                            Toast.makeText(
+                                    MainActivity.this,
+                                    getString(R.string.collection_login_required),
+                                    Toast.LENGTH_SHORT
+                            ).show();
+                            if (navigationTabs.getTabCount() > 0) {
+                                navigationTabs.getTabAt(0).select();
+                            }
+                            Intent authIntent = new Intent(MainActivity.this, AuthActivity.class);
+                            authIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                            startActivity(authIntent);
+                            return;
+                        }
                         Intent intent = new Intent(MainActivity.this, DataCollectionActivity.class);
                         intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                         startActivity(intent);
@@ -182,6 +200,19 @@ public class MainActivity extends AppCompatActivity {
 
         btnInfo = findViewById(R.id.btnInfo);
         btnInfo.setOnClickListener(view -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/woheller69/whisperIME#Donate"))));
+        btnRelogin = findViewById(R.id.btnRelogin);
+        updateAccountButtonText();
+        btnRelogin.setOnClickListener(view -> {
+            if (isLoggedIn()) {
+                SharedPreferences.Editor editor = sp.edit();
+                editor.remove(PREF_USERNAME);
+                editor.apply();
+            }
+            Intent intent = new Intent(MainActivity.this, AuthActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            finish();
+        });
 
         spinnerLanguage = findViewById(R.id.spnrLanguage);
         List<Pair<String, String>> languagePairs = LanguagePairAdapter.getLanguagePairs(this);
@@ -335,6 +366,23 @@ public class MainActivity extends AppCompatActivity {
         if (!inputMethodEnabled) {
             Intent intent = new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS);
             startActivity(intent);
+        }
+    }
+
+    private boolean isLoggedIn() {
+        String username = sp.getString(PREF_USERNAME, "");
+        return username != null && !username.trim().isEmpty();
+    }
+
+    private void updateAccountButtonText() {
+        if (btnRelogin == null || sp == null) {
+            return;
+        }
+        String username = sp.getString(PREF_USERNAME, "");
+        if (username == null || username.trim().isEmpty()) {
+            btnRelogin.setText(getString(R.string.auth_page_need_login));
+        } else {
+            btnRelogin.setText(username.trim());
         }
     }
 

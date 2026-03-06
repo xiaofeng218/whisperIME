@@ -22,6 +22,7 @@
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
@@ -47,6 +48,11 @@
 
         <activity
             android:name=".DataCollectionActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Whisper.NoActionBar" />
+
+        <activity
+            android:name=".AuthActivity"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Whisper.NoActionBar" />
 

@@ -13,6 +13,7 @@
     <color name="bg_blue_light">#EFF6FF</color>
     
     <color name="success_green">#10B981</color>
+    <color name="account_badge_yellow">#FDE047</color>
     <color name="error_red">#EF4444</color>
     <color name="warning_orange">#F59E0B</color>
     

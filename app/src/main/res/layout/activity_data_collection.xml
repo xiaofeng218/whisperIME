@@ -37,11 +37,11 @@
                     <com.google.android.material.tabs.TabItem
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="语音识别" />
+                        android:text="@string/tab_speech_recognition" />
                     <com.google.android.material.tabs.TabItem
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="语音采集" />
+                        android:text="@string/tab_voice_collection" />
                 </com.google.android.material.tabs.TabLayout>
 
                 <View
@@ -60,7 +60,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="语音采集"
+                        android:text="@string/voice_collection_title"
                         android:textColor="@color/primary_blue"
                         android:textSize="24sp"
                         android:textStyle="bold" />
@@ -70,7 +70,7 @@
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="导入"
+                        android:text="@string/import_text"
                         app:cornerRadius="12dp"
                         app:backgroundTint="@color/bg_blue_light"
                         android:textColor="@color/primary_blue"
@@ -92,7 +92,7 @@
                             android:id="@+id/tvCollectionProgressText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="进度：1 / 2"
+                            android:text="@string/collection_progress_default"
                             android:textSize="12sp"
                             android:textStyle="bold"
                             android:textColor="@color/text_gray" />
@@ -148,7 +148,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center"
-                        android:text="今天天气真好"
+                        android:text="@string/collection_sample_text"
                         android:textColor="@color/text_dark"
                         android:textSize="36sp"
                         android:textStyle="bold"
@@ -159,9 +159,17 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="32dp"
-                        android:text="点击下方按钮开始录音"
+                        android:text="@string/collection_status_ready"
                         android:textColor="@color/text_gray"
                         android:textSize="16sp" />
+
+                    <ProgressBar
+                        android:id="@+id/upload_loading"
+                        style="?android:attr/progressBarStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone" />
 
                     <!-- Playback Button -->
                     <com.google.android.material.button.MaterialButton
@@ -170,7 +178,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="24dp"
-                        android:text="听我的录音"
+                        android:text="@string/play_my_recording"
                         android:visibility="invisible"
                         app:icon="@drawable/ic_play_arrow_24dp"
                         app:cornerRadius="16dp"

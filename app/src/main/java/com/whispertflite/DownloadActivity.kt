@@ -27,7 +27,7 @@ class DownloadActivity  : AppCompatActivity() {
             binding?.downloadProgress?.setVisibility(View.VISIBLE)
             binding?.buttonStart?.setVisibility(View.VISIBLE)
             if (!Downloader.checkUpdate(this)){
-                val intent = Intent(this, MainActivity::class.java)
+                val intent = Intent(this, AuthActivity::class.java)
                 startActivity(intent)
                 finish()
             } else {
@@ -44,7 +44,7 @@ class DownloadActivity  : AppCompatActivity() {
     }
 
     fun startMain(view: View) {
-        val intent = Intent(this, MainActivity::class.java)
+        val intent = Intent(this, AuthActivity::class.java)
         startActivity(intent)
         finish()
     }
