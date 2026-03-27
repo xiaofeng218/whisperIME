@@ -3,7 +3,7 @@ package com.whispertflite;
 import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 import static com.whispertflite.MainActivity.ENGLISH_ONLY_VOCAB_FILE;
 import static com.whispertflite.MainActivity.MULTILINGUAL_VOCAB_FILE;
-import static com.whispertflite.MainActivity.MULTI_LINGUAL_TOP_WORLD_SLOW;
+import static com.whispertflite.MainActivity.MULTI_LINGUAL_MODEL_SLOW;
 import static com.whispertflite.MainActivity.ENGLISH_ONLY_MODEL_EXTENSION;
 
 import android.annotation.SuppressLint;
@@ -88,7 +88,7 @@ public class WhisperInputMethodService extends InputMethodService {
 
     @Override
     public void onStartInputView(EditorInfo attribute, boolean restarting){
-        selectedTfliteFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
+        selectedTfliteFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_MODEL_SLOW));
 
         if (!selectedTfliteFile.exists()) {
             switchToPreviousInputMethod();  //switch back and download models first
@@ -306,10 +306,8 @@ public class WhisperInputMethodService extends InputMethodService {
                 });
 
                 String result = whisperResult.getResult();
-                if (whisperResult.getLanguage().equals("zh")){
-                    boolean simpleChinese = sp.getBoolean("simpleChinese",false);
-                    result = simpleChinese ? ZhConverterUtil.toSimple(result) : ZhConverterUtil.toTraditional(result);
-                }
+                result = ZhConverterUtil.toSimple(result);
+                
                 boolean commitSuccess = false;
                 if (result.trim().length() > 0) commitSuccess = getCurrentInputConnection().commitText(result.trim() + " ",1);
                 if (modeAuto && commitSuccess) handler.postDelayed(() -> switchToPreviousInputMethod(), 100); //slightly delayed, otherwise some apps, e.g. WhatsApp, do not accept the committed text (commitText on inactive InputConnection)
@@ -322,11 +320,9 @@ public class WhisperInputMethodService extends InputMethodService {
         handler.post(() -> processingBar.setProgress(0));
         handler.post(() -> processingBar.setIndeterminate(true));
         if (mWhisper!=null){
-            if (translate) mWhisper.setAction(Whisper.ACTION_TRANSLATE);
-            else mWhisper.setAction(Whisper.ACTION_TRANSCRIBE);
+            mWhisper.setAction(Whisper.ACTION_TRANSCRIBE);
 
-            String langCode = sp.getString("language", "auto");
-            int langToken = InputLang.getIdForLanguage(InputLang.getLangList(),langCode);
+            int langToken = InputLang.getIdForLanguage(InputLang.getLangList(),"zh");
             Log.d("WhisperIME","default langToken " + langToken);
             mWhisper.setLanguage(langToken);
             mWhisper.start();

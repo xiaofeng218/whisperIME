@@ -9,8 +9,9 @@ import com.whispertflite.databinding.ActivityDownloadBinding
 import com.whispertflite.utils.Downloader
 import com.whispertflite.utils.ThemeUtils
 
-class DownloadActivity  : AppCompatActivity() {
+class DownloadActivity : AppCompatActivity() {
     private var binding: ActivityDownloadBinding? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityDownloadBinding.inflate(layoutInflater)
@@ -21,26 +22,34 @@ class DownloadActivity  : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (Downloader.checkModels(this)){
-            // call Main Activity
-            binding?.downloadProgress?.setProgress(100)
-            binding?.downloadProgress?.setVisibility(View.VISIBLE)
-            binding?.buttonStart?.setVisibility(View.VISIBLE)
-            if (!Downloader.checkUpdate(this)){
+        if (Downloader.checkModels(this)) {
+            showSuccessState()
+            if (!Downloader.checkUpdate(this)) {
                 val intent = Intent(this, AuthActivity::class.java)
                 startActivity(intent)
                 finish()
             } else {
-                binding?.buttonUpdate?.setVisibility(View.VISIBLE)
+                binding?.buttonUpdate?.visibility = View.VISIBLE
             }
         }
     }
 
     fun download(view: View) {
-        binding?.downloadSize?.setVisibility(View.VISIBLE)
-        binding?.downloadProgress?.setVisibility(View.VISIBLE)
-        binding?.buttonStart?.setVisibility(View.INVISIBLE)
+        binding?.downloadSize?.visibility = View.VISIBLE
+        binding?.downloadProgress?.visibility = View.VISIBLE
+        binding?.buttonStart?.visibility = View.INVISIBLE
+        binding?.downloadButton?.visibility = View.GONE
+        binding?.circularLoading?.visibility = View.VISIBLE
+        
         Downloader.downloadModels(this, binding)
+    }
+
+    private fun showSuccessState() {
+        binding?.downloadProgress?.progress = 100
+        binding?.circularLoading?.visibility = View.GONE
+        binding?.downloadButton?.visibility = View.GONE
+        binding?.successCheck?.visibility = View.VISIBLE
+        binding?.buttonStart?.visibility = View.VISIBLE
     }
 
     fun startMain(view: View) {
@@ -50,11 +59,15 @@ class DownloadActivity  : AppCompatActivity() {
     }
 
     fun updateModels(view: View) {
-        binding?.downloadSize?.setVisibility(View.VISIBLE)
-        binding?.downloadProgress?.setVisibility(View.VISIBLE)
-        binding?.buttonStart?.setVisibility(View.INVISIBLE)
-        binding?.buttonUpdate?.setVisibility(View.GONE)
-        Downloader.deleteOldModels(this);
+        binding?.downloadSize?.visibility = View.VISIBLE
+        binding?.downloadProgress?.visibility = View.VISIBLE
+        binding?.buttonStart?.visibility = View.INVISIBLE
+        binding?.buttonUpdate?.visibility = View.GONE
+        
+        binding?.downloadButton?.visibility = View.GONE
+        binding?.circularLoading?.visibility = View.VISIBLE
+        
+        Downloader.deleteOldModels(this)
         Downloader.downloadModels(this, binding)
     }
 }

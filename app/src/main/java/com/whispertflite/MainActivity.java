@@ -69,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String MULTI_LINGUAL_MODEL_FAST = "whisper-base.tflite";
     public static final String MULTI_LINGUAL_MODEL_SLOW = "whisper-small.tflite";
     public static final String ENGLISH_ONLY_MODEL = "whisper-tiny.en.tflite";
-    public static final String MY_MODEL = "whisper-my.tflite";
+    public static final String CUSTOM_MODEL = "whisper-small.tflite";
     public static final String ENGLISH_ONLY_MODEL_EXTENSION = ".en.tflite";
     public static final String ENGLISH_ONLY_VOCAB_FILE = "filters_vocab_en.bin";
     public static final String MULTILINGUAL_VOCAB_FILE = "filters_vocab_multilingual.bin";
@@ -215,39 +215,16 @@ public class MainActivity extends AppCompatActivity {
         });
 
         spinnerLanguage = findViewById(R.id.spnrLanguage);
-        List<Pair<String, String>> languagePairs = LanguagePairAdapter.getLanguagePairs(this);
-        LanguagePairAdapter languagePairAdapter = new LanguagePairAdapter(this, android.R.layout.simple_spinner_item, languagePairs);
-        languagePairAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerLanguage.setAdapter(languagePairAdapter);
-
-        spinnerLanguage.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                langToken = InputLang.getIdForLanguage(InputLang.getLangList(),languagePairs.get(i).first);
-                SharedPreferences.Editor editor = sp.edit();
-                editor.putString("language",languagePairs.get(i).first);
-                editor.apply();
-            }
-            @Override public void onNothingSelected(AdapterView<?> adapterView) {}
-        });
-
+        langToken = InputLang.getIdForLanguage(InputLang.getLangList(), "zh");
+        
         ArrayList<File> tfliteFiles = getFilesWithExtension(sdcardDataFolder, ".tflite");
-        selectedTfliteFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
+        selectedTfliteFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_MODEL_SLOW));
         ArrayAdapter<File> tfliteAdapter = getFileArrayAdapter(tfliteFiles);
         int position = tfliteAdapter.getPosition(selectedTfliteFile);
         spinnerTflite = findViewById(R.id.spnrTfliteFiles);
         spinnerTflite.setAdapter(tfliteAdapter);
         spinnerTflite.setSelection(position,false);
         
-        if (selectedTfliteFile.getName().equals(MULTI_LINGUAL_EU_MODEL_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_SLOW) || selectedTfliteFile.getName().equals(MY_MODEL)){
-            spinnerLanguage.setEnabled(true);
-            String langCode = sp.getString("language", "auto");
-            spinnerLanguage.setSelection(languagePairAdapter.getIndexByCode(langCode));
-        } else {
-            spinnerLanguage.setSelection(0);
-            spinnerLanguage.setEnabled(false);
-        }
-
         spinnerTflite.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -257,14 +234,6 @@ public class MainActivity extends AppCompatActivity {
                 editor.putString("modelName",selectedTfliteFile.getName());
                 editor.apply();
                 initModel();
-                if (selectedTfliteFile.getName().equals(MULTI_LINGUAL_EU_MODEL_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_SLOW) || selectedTfliteFile.getName().equals(MY_MODEL)){
-                    spinnerLanguage.setEnabled(true);
-                    String langCode = sp.getString("language", "auto");
-                    spinnerLanguage.setSelection(languagePairAdapter.getIndexByCode(langCode));
-                } else {
-                    spinnerLanguage.setSelection(0);
-                    spinnerLanguage.setEnabled(false);
-                }
             }
             @Override public void onNothingSelected(AdapterView<?> parent) {}
         });
@@ -387,7 +356,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initModel() {
-        File modelFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
+        File modelFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_MODEL_SLOW));
         boolean isMultilingualModel = !(modelFile.getName().endsWith(ENGLISH_ONLY_MODEL_EXTENSION));
         String vocabFileName = isMultilingualModel ? MULTILINGUAL_VOCAB_FILE : ENGLISH_ONLY_VOCAB_FILE;
         File vocabFile = new File(sdcardDataFolder, vocabFileName);
@@ -409,15 +378,11 @@ public class MainActivity extends AppCompatActivity {
                 long timeTaken = System.currentTimeMillis() - startTime;
                 runOnUiThread(() -> tvStatus.setText(getString(R.string.processing_done) + timeTaken + "\u2009ms" + "\n"+ getString(R.string.language) + " " + new Locale(whisperResult.getLanguage()).getDisplayLanguage() + " " + (whisperResult.getTask() == Whisper.Action.TRANSCRIBE ? getString(R.string.mode_transcription) : getString(R.string.mode_translation))));
                 runOnUiThread(() -> processingBar.setIndeterminate(false));
-                if ((whisperResult.getLanguage().equals("zh")) && (whisperResult.getTask() == Whisper.Action.TRANSCRIBE)){
-                    runOnUiThread(() -> layoutModeChinese.setVisibility(View.VISIBLE));
-                    boolean simpleChinese = sp.getBoolean("simpleChinese",false);
-                    String result = simpleChinese ? ZhConverterUtil.toSimple(whisperResult.getResult()) : ZhConverterUtil.toTraditional(whisperResult.getResult());
-                    runOnUiThread(() -> tvResult.append(result));
-                } else {
-                    runOnUiThread(() -> layoutModeChinese.setVisibility(View.GONE));
-                    runOnUiThread(() -> tvResult.append(whisperResult.getResult()));
-                }
+                
+                runOnUiThread(() -> layoutModeChinese.setVisibility(View.GONE));
+                String result = ZhConverterUtil.toSimple(whisperResult.getResult());
+                runOnUiThread(() -> tvResult.append(result));
+                
                 runOnUiThread(() -> spinnerTflite.setEnabled(true));
                 if (modeTTS.isChecked()){
                     tts.speak(whisperResult.getResult(), TextToSpeech.QUEUE_FLUSH, null, null);
@@ -447,13 +412,12 @@ public class MainActivity extends AppCompatActivity {
                 View view = super.getView(position, convertView, parent);
                 TextView textView = view.findViewById(android.R.id.text1);
                 String fileName = getItem(position).getName();
-                if (fileName.equals(MULTI_LINGUAL_MODEL_SLOW)) textView.setText(R.string.multi_lingual_slow);
+                if (fileName.equals(MULTI_LINGUAL_MODEL_SLOW)) textView.setText(R.string.multi_lingual_default);
                 else if (fileName.equals(MULTI_LINGUAL_TOP_WORLD_SLOW)) textView.setText(R.string.multi_lingual_slow);
                 else if (fileName.equals(ENGLISH_ONLY_MODEL)) textView.setText(R.string.english_only_fast);
                 else if (fileName.equals(MULTI_LINGUAL_MODEL_FAST)) textView.setText(R.string.multi_lingual_fast);
                 else if (fileName.equals(MULTI_LINGUAL_EU_MODEL_FAST)) textView.setText(R.string.multi_lingual_fast);
                 else if (fileName.equals(MULTI_LINGUAL_TOP_WORLD_FAST)) textView.setText(R.string.multi_lingual_fast);
-                else if (fileName.equals(MY_MODEL)) textView.setText("My Model");
                 else textView.setText(fileName.substring(0, fileName.length() - ".tflite".length()));
                 return view;
             }
@@ -462,13 +426,12 @@ public class MainActivity extends AppCompatActivity {
                 View view = super.getDropDownView(position, convertView, parent);
                 TextView textView = view.findViewById(android.R.id.text1);
                 String fileName = getItem(position).getName();
-                if (fileName.equals(MULTI_LINGUAL_MODEL_SLOW)) textView.setText(R.string.multi_lingual_slow);
+                if (fileName.equals(MULTI_LINGUAL_MODEL_SLOW)) textView.setText(R.string.multi_lingual_default);
                 else if (fileName.equals(MULTI_LINGUAL_TOP_WORLD_SLOW)) textView.setText(R.string.multi_lingual_slow);
                 else if (fileName.equals(ENGLISH_ONLY_MODEL)) textView.setText(R.string.english_only_fast);
                 else if (fileName.equals(MULTI_LINGUAL_MODEL_FAST)) textView.setText(R.string.multi_lingual_fast);
                 else if (fileName.equals(MULTI_LINGUAL_EU_MODEL_FAST)) textView.setText(R.string.multi_lingual_fast);
                 else if (fileName.equals(MULTI_LINGUAL_TOP_WORLD_FAST)) textView.setText(R.string.multi_lingual_fast);
-                else if (fileName.equals(MY_MODEL)) textView.setText("My Model");
                 else textView.setText(fileName.substring(0, fileName.length() - ".tflite".length()));
                 return view;
             }
@@ -514,7 +477,7 @@ public class MainActivity extends AppCompatActivity {
             processingBar.setProgress(0);
             processingBar.setIndeterminate(true);
         });
-        mWhisper.setAction(action);
+        mWhisper.setAction(Whisper.Action.TRANSCRIBE);
         mWhisper.setLanguage(langToken);
         mWhisper.start();
     }

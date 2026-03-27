@@ -85,7 +85,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/select_model"
                             android:textColor="@color/text_dark"
-                            android:textSize="14sp"
+                            android:textSize="18sp"
                             android:textStyle="bold" />
 
                         <Spinner
@@ -93,7 +93,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:layout_marginStart="8dp" />
+                            android:layout_marginStart="12dp" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -102,14 +102,15 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
                         android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:visibility="gone">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/language"
                             android:textColor="@color/text_dark"
-                            android:textSize="14sp"
+                            android:textSize="18sp"
                             android:textStyle="bold" />
 
                         <Spinner
@@ -117,20 +118,21 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:layout_marginStart="8dp" />
+                            android:layout_marginStart="12dp" />
                     </LinearLayout>
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
                         android:background="@color/border_light"
-                        android:layout_marginVertical="8dp" />
+                        android:layout_marginVertical="12dp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:layout_marginVertical="4dp">
 
                         <TextView
                             android:layout_width="0dp"
@@ -138,19 +140,23 @@
                             android:layout_weight="1"
                             android:text="@string/append"
                             android:textColor="@color/text_dark"
-                            android:textSize="14sp" />
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
 
                         <CheckBox
                             android:id="@+id/mode_append"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"
+                            android:scaleX="1.2"
+                            android:scaleY="1.2" />
                     </LinearLayout>
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:visibility="gone">
 
                         <TextView
                             android:layout_width="0dp"
@@ -158,7 +164,7 @@
                             android:layout_weight="1"
                             android:text="@string/translate"
                             android:textColor="@color/text_dark"
-                            android:textSize="14sp" />
+                            android:textSize="16sp" />
 
                         <CheckBox
                             android:id="@+id/mode_translate"
@@ -180,7 +186,7 @@
                             android:layout_weight="1"
                             android:text="@string/text_to_speech"
                             android:textColor="@color/text_dark"
-                            android:textSize="14sp" />
+                            android:textSize="16sp" />
 
                         <CheckBox
                             android:id="@+id/mode_tts"
@@ -202,7 +208,7 @@
                             android:layout_weight="1"
                             android:text="@string/simple_chinese"
                             android:textColor="@color/text_dark"
-                            android:textSize="14sp" />
+                            android:textSize="16sp" />
 
                         <CheckBox
                             android:id="@+id/mode_simple_chinese"
@@ -218,13 +224,13 @@
                     android:layout_marginTop="16dp"
                     android:background="@drawable/bg_card_rounded"
                     android:orientation="vertical"
-                    android:padding="16dp"
+                    android:padding="20dp"
                     android:elevation="2dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
+                        android:layout_marginBottom="12dp"
                         android:orientation="horizontal">
 
                         <TextView
@@ -233,7 +239,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/status"
                             android:textColor="@color/primary_blue"
-                            android:textSize="14sp"
+                            android:textSize="18sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -242,14 +248,15 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="8dp"
                             android:textColor="@color/text_dark"
-                            android:textSize="14sp" />
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
 
                     <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="240dp"
+                        android:layout_height="320dp"
                         android:background="@color/bg_blue_light"
-                        android:padding="8dp">
+                        android:padding="12dp">
 
                         <EditText
                             android:id="@+id/tvResult"
@@ -260,7 +267,7 @@
                             android:hint="@string/instructions"
                             android:scrollbars="vertical"
                             android:textColor="@color/text_dark"
-                            android:textSize="16sp" />
+                            android:textSize="20sp" />
 
                         <com.google.android.material.floatingactionbutton.FloatingActionButton
                             android:id="@+id/fabCopy"
@@ -324,24 +331,22 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnRelogin"
-                style="@style/Widget.Material3.Button"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:background="@drawable/bg_account_badge"
-                android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="2"
-                android:padding="0dp"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:paddingHorizontal="16dp"
                 android:text="@string/relogin"
                 android:textAllCaps="false"
-                android:fontFamily="kaiti"
-                android:textStyle="bold" 
-                android:textColor="@color/text_dark"
-                android:textSize="20sp"
-                android:elevation="8dp"
-                app:backgroundTint="@null"
-                app:cornerRadius="39dp"
-                app:rippleColor="@color/surface_white" />
+                android:textStyle="bold"
+                android:textColor="@color/primary_blue"
+                android:textSize="14sp"
+                app:cornerRadius="24dp"
+                app:backgroundTint="@color/surface_white"
+                app:icon="@drawable/ic_account_circle"
+                app:iconTint="@color/primary_blue"
+                app:iconSize="24dp"
+                app:elevation="4dp" />
 
             <View
                 android:layout_width="0dp"

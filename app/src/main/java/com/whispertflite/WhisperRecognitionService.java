@@ -6,7 +6,7 @@ import static android.speech.SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE;
 import static com.whispertflite.MainActivity.ENGLISH_ONLY_MODEL_EXTENSION;
 import static com.whispertflite.MainActivity.ENGLISH_ONLY_VOCAB_FILE;
 import static com.whispertflite.MainActivity.MULTILINGUAL_VOCAB_FILE;
-import static com.whispertflite.MainActivity.MULTI_LINGUAL_TOP_WORLD_SLOW;
+import static com.whispertflite.MainActivity.MULTI_LINGUAL_MODEL_SLOW;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -46,24 +46,14 @@ public class WhisperRecognitionService extends RecognitionService {
 
     @Override
     protected void onStartListening(Intent recognizerIntent, Callback callback) {
-        String targetLang = recognizerIntent.getStringExtra(RecognizerIntent.EXTRA_LANGUAGE);
         sp = PreferenceManager.getDefaultSharedPreferences(this);
-        String langCode = sp.getString("recognitionServiceLanguage", "auto");
-        int langToken = InputLang.getIdForLanguage(InputLang.getLangList(),langCode);
-        Log.d(TAG,"default langToken " + langToken);
-
-        if (targetLang != null) {
-            Log.d(TAG,"StartListening in " + targetLang);
-            langCode = targetLang.split("[-_]")[0].toLowerCase();   //support both de_DE and de-DE
-            langToken = InputLang.getIdForLanguage(InputLang.getLangList(),langCode);
-        } else {
-            Log.d(TAG,"StartListening, no language specified");
-        }
+        int langToken = InputLang.getIdForLanguage(InputLang.getLangList(), "zh");
+        Log.d(TAG,"fixed langToken " + langToken);
 
         checkRecordPermission(callback);
 
         sdcardDataFolder = this.getExternalFilesDir(null);
-        selectedTfliteFile = new File(sdcardDataFolder, sp.getString("recognitionServiceModelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
+        selectedTfliteFile = new File(sdcardDataFolder, sp.getString("recognitionServiceModelName", MULTI_LINGUAL_MODEL_SLOW));
 
         if (!selectedTfliteFile.exists()) {
             try {
@@ -162,10 +152,7 @@ public class WhisperRecognitionService extends RecognitionService {
                         ArrayList<String> resultList = new ArrayList<>();
 
                         String result = whisperResult.getResult();
-                        if (whisperResult.getLanguage().equals("zh")){
-                            boolean simpleChinese = sp.getBoolean("RecognitionServiceSimpleChinese",false);
-                            result = simpleChinese ? ZhConverterUtil.toSimple(result) : ZhConverterUtil.toTraditional(result);
-                        }
+                        result = ZhConverterUtil.toSimple(result);
 
                         resultList.add(result.trim());
                         results.putStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION, resultList);

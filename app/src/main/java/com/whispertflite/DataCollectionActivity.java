@@ -68,7 +68,7 @@ public class DataCollectionActivity extends AppCompatActivity {
     private TextView tvTargetText, tvCollectionStatus, tvProgressText, tvPercent;
     private ProgressBar progressBar, uploadLoading;
     private ImageButton btnRecord, btnPrev;
-    private MaterialButton btnNext, btnPlay, btnImport;
+    private MaterialButton btnNext, btnPlay, btnImport, btnRelogin;
     private TabLayout navigationTabs;
 
     private Recorder mRecorder;
@@ -180,8 +180,19 @@ public class DataCollectionActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        updateAccountButtonText();
         if (navigationTabs != null && navigationTabs.getTabCount() > 1) {
             navigationTabs.getTabAt(1).select();
+        }
+    }
+
+    private void updateAccountButtonText() {
+        if (btnRelogin == null) return;
+        mUsername = mPreferences.getString(PREF_USERNAME, "");
+        if (mUsername == null || mUsername.trim().isEmpty()) {
+            btnRelogin.setText(getString(R.string.auth_page_need_login));
+        } else {
+            btnRelogin.setText(mUsername.trim());
         }
     }
 
@@ -198,6 +209,17 @@ public class DataCollectionActivity extends AppCompatActivity {
         btnNext = findViewById(R.id.btnNext);
         btnPlay = findViewById(R.id.btnPlayRecording);
         btnImport = findViewById(R.id.btnImportTxt);
+        btnRelogin = findViewById(R.id.btnRelogin);
+        updateAccountButtonText();
+        btnRelogin.setOnClickListener(v -> {
+            if (!mUsername.isEmpty()) {
+                mPreferences.edit().remove(PREF_USERNAME).apply();
+            }
+            Intent intent = new Intent(this, AuthActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            finish();
+        });
 
         btnImport.setOnClickListener(v -> {
             if (mIsUploading) return;
@@ -497,10 +519,8 @@ public class DataCollectionActivity extends AppCompatActivity {
 
         if (mCurrentIndex == mTargetPhrases.size() - 1) {
             btnNext.setText(getString(R.string.collection_upload));
-            btnNext.setIcon(null);
         } else {
             btnNext.setText("");
-            btnNext.setIcon(ContextCompat.getDrawable(this, R.drawable.ic_arrow_forward_24dp));
         }
 
         File audioFile = new File(mCollectionFolder, "phrase_" + mCurrentIndex + ".wav");

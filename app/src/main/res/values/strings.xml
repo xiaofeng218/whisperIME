@@ -4,8 +4,8 @@
     <string name="voice_input">语音输入</string>
     <string name="need_record_audio_permission">未授予录制音频权限</string>
     <string name="error_download">下载错误</string>
-    <string name="download_model">下载模型</string>
-    <string name="download_model_text">\n从 Hugging Face 下载 Whisper 模型(~435 MB)</string>
+    <string name="download_model">下载基础模型</string>
+    <string name="download_model_text"></string>
     <string name="select_model">模型:</string>
     <string name="status">状态:</string>
     <string name="append">附加:</string>
@@ -25,6 +25,7 @@
     <string name="processing_done">处理完成于\u2009</string>
     <string name="language">语言:</string>
     <string name="multi_lingual_slow">多语言，较慢</string>
+    <string name="multi_lingual_default">默认</string>
     <string name="english_only_fast">仅英语，较快</string>
     <string name="multi_lingual_fast">多语种，较快</string>
     <string name="mode_transcription">转录</string>
