@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/windowBackground"
+    android:fitsSystemWindows="true">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="24dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="56dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/dev_settings_title"
+                android:textColor="@color/text_dark"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/dev_settings_subtitle"
+                android:textColor="@color/text_gray"
+                android:textSize="14sp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                app:cardBackgroundColor="@color/surface_white"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/border_light"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/dev_settings_api_title"
+                        android:textColor="@color/text_dark"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/dev_settings_default_value"
+                            android:textColor="@color/text_gray"
+                            android:textSize="12sp" />
+
+                        <ImageView
+                            android:id="@+id/ivApiDefaultArrow"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:rotation="90"
+                            android:src="@drawable/ic_arrow_forward_24dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:contentDescription="@string/dev_settings_toggle_url"
+                            app:tint="@color/text_gray" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvApiDefaultValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/text_dark"
+                        android:textSize="14sp"
+                        android:visibility="gone"
+                        tools:text="http://43.143.17.185:8000"
+                        tools:visibility="visible" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/dev_settings_effective_value"
+                            android:textColor="@color/text_gray"
+                            android:textSize="12sp" />
+
+                        <ImageView
+                            android:id="@+id/ivApiEffectiveArrow"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:rotation="90"
+                            android:src="@drawable/ic_arrow_forward_24dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:contentDescription="@string/dev_settings_toggle_url"
+                            app:tint="@color/text_gray" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvApiEffectiveValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/text_dark"
+                        android:textSize="14sp"
+                        android:visibility="gone"
+                        tools:text="http://43.143.17.185:8000"
+                        tools:visibility="visible" />
+
+                    <EditText
+                        android:id="@+id/etApiOverride"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:background="@drawable/rounded_button_frame"
+                        android:hint="@string/dev_settings_api_hint"
+                        android:inputType="textUri"
+                        android:padding="14dp"
+                        android:textColor="@color/text_dark"
+                        android:textColorHint="@color/text_gray" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btnSaveApiConfig"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="6dp"
+                            android:layout_weight="1"
+                            android:backgroundTint="@color/colorAccent"
+                            android:text="@string/dev_settings_save"
+                            android:textAllCaps="false"
+                            android:textColor="@color/lightGrey" />
+
+                        <Button
+                            android:id="@+id/btnResetApiConfig"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:layout_weight="1"
+                            android:backgroundTint="@color/lightGrey"
+                            android:text="@string/dev_settings_reset"
+                            android:textAllCaps="false"
+                            android:textColor="@color/primary_blue" />
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/btnTestApiConfig"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:backgroundTint="@color/lightGrey"
+                        android:text="@string/dev_settings_test_connection"
+                        android:textAllCaps="false"
+                        android:textColor="@color/primary_blue" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="24dp"
+                app:cardBackgroundColor="@color/surface_white"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/border_light"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/dev_settings_model_title"
+                        android:textColor="@color/text_dark"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/dev_settings_default_value"
+                            android:textColor="@color/text_gray"
+                            android:textSize="12sp" />
+
+                        <ImageView
+                            android:id="@+id/ivModelDefaultArrow"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:rotation="90"
+                            android:src="@drawable/ic_arrow_forward_24dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:contentDescription="@string/dev_settings_toggle_url"
+                            app:tint="@color/text_gray" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvModelDefaultUrlValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/text_dark"
+                        android:textSize="14sp"
+                        android:visibility="gone"
+                        tools:text="https://modelscope.cn/..."
+                        tools:visibility="visible" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/dev_settings_effective_value"
+                            android:textColor="@color/text_gray"
+                            android:textSize="12sp" />
+
+                        <ImageView
+                            android:id="@+id/ivModelEffectiveArrow"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:rotation="90"
+                            android:src="@drawable/ic_arrow_forward_24dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:contentDescription="@string/dev_settings_toggle_url"
+                            app:tint="@color/text_gray" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvModelEffectiveUrlValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/text_dark"
+                        android:textSize="14sp"
+                        android:visibility="gone"
+                        tools:text="https://modelscope.cn/..."
+                        tools:visibility="visible" />
+
+                    <EditText
+                        android:id="@+id/etModelOverride"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:background="@drawable/rounded_button_frame"
+                        android:hint="@string/dev_settings_model_hint"
+                        android:inputType="textUri"
+                        android:padding="14dp"
+                        android:textColor="@color/text_dark"
+                        android:textColorHint="@color/text_gray" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btnSaveModelConfig"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="6dp"
+                            android:layout_weight="1"
+                            android:backgroundTint="@color/colorAccent"
+                            android:text="@string/dev_settings_save"
+                            android:textAllCaps="false"
+                            android:textColor="@color/lightGrey" />
+
+                        <Button
+                            android:id="@+id/btnResetModelConfig"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:layout_weight="1"
+                            android:backgroundTint="@color/lightGrey"
+                            android:text="@string/dev_settings_reset"
+                            android:textAllCaps="false"
+                            android:textColor="@color/primary_blue" />
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/btnTestModelConfig"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:backgroundTint="@color/lightGrey"
+                        android:text="@string/dev_settings_test_connection"
+                        android:textAllCaps="false"
+                        android:textColor="@color/primary_blue" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </ScrollView>
+
+    <ImageButton
+        android:id="@+id/btnBackDeveloperSettings"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/rounded_button_blue"
+        android:contentDescription="@string/return_button"
+        android:elevation="8dp"
+        android:padding="10dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_arrow_back_24dp"
+        app:tint="@color/surface_white" />
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

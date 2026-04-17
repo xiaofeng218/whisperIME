@@ -1,7 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <!-- 允许对你服务器正确 IP 的明文访问 -->
-        <domain includeSubdomains="true">43.143.17.185</domain>
-    </domain-config>
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

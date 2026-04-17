@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.preference.PreferenceManager;
 
+import com.whispertflite.utils.EndpointConfig;
 import com.whispertflite.utils.ThemeUtils;
 
 import org.json.JSONObject;
@@ -32,13 +33,13 @@ import java.util.concurrent.Executors;
 
 public class AuthActivity extends AppCompatActivity {
     private static final String TAG = "AuthActivity";
-    private static final String SERVER_BASE_URL = "http://43.143.17.185:8000";
     private static final String PREF_USERNAME = "collector_username";
 
     private EditText etUsername;
     private TextView tvAuthStatus;
     private Button btnLogin;
     private Button btnRegister;
+    private Button btnDeveloperSettings;
     private ImageButton btnBackMain;
 
     private SharedPreferences preferences;
@@ -64,11 +65,21 @@ public class AuthActivity extends AppCompatActivity {
         tvAuthStatus = findViewById(R.id.tvAuthStatus);
         btnLogin = findViewById(R.id.btnLogin);
         btnRegister = findViewById(R.id.btnRegister);
+        btnDeveloperSettings = findViewById(R.id.btnDeveloperSettings);
         btnBackMain = findViewById(R.id.btnBackMain);
+        updateAuthStatus();
 
         btnLogin.setOnClickListener(v -> submitAuth(false));
         btnRegister.setOnClickListener(v -> submitAuth(true));
+        btnDeveloperSettings.setOnClickListener(v ->
+                startActivity(new Intent(this, DeveloperSettingsActivity.class)));
         btnBackMain.setOnClickListener(v -> openMainAndFinish());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateAuthStatus();
     }
 
     private void submitAuth(boolean register) {
@@ -100,7 +111,7 @@ public class AuthActivity extends AppCompatActivity {
     private ApiResult postAuth(String path, String username) {
         HttpURLConnection conn = null;
         try {
-            URL url = new URL(SERVER_BASE_URL + path);
+            URL url = new URL(EndpointConfig.getApiBaseUrl(this) + path);
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setConnectTimeout(15000);
@@ -162,12 +173,20 @@ public class AuthActivity extends AppCompatActivity {
     private void setAuthLoading(boolean loading) {
         btnLogin.setEnabled(!loading);
         btnRegister.setEnabled(!loading);
+        btnDeveloperSettings.setEnabled(!loading);
         btnBackMain.setEnabled(!loading);
         etUsername.setEnabled(!loading);
     }
 
     private String safeTrim(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private void updateAuthStatus() {
+        if (tvAuthStatus == null) {
+            return;
+        }
+        tvAuthStatus.setText(getString(R.string.auth_page_status_format, EndpointConfig.getApiBaseUrl(this)));
     }
 
     private void openMainAndFinish() {

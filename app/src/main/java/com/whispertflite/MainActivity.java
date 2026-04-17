@@ -8,16 +8,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.Looper;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.preference.PreferenceManager;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
-import android.util.Pair;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,6 +27,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
@@ -46,14 +47,24 @@ import com.google.android.material.tabs.TabLayout;
 import com.whispertflite.asr.Recorder;
 import com.whispertflite.asr.Whisper;
 import com.whispertflite.asr.WhisperResult;
+import com.whispertflite.utils.EndpointConfig;
 import com.whispertflite.utils.HapticFeedback;
 import com.whispertflite.utils.InputLang;
-import com.whispertflite.utils.LanguagePairAdapter;
+import com.whispertflite.utils.ModelSelection;
+import com.whispertflite.utils.PublishedModelSync;
 import com.whispertflite.utils.ThemeUtils;
 
+import org.json.JSONObject;
 import org.woheller69.freeDroidWarn.FreeDroidWarn;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -62,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
     private Context mContext;
     private static final String TAG = "MainActivity";
     private static final String PREF_USERNAME = "collector_username";
+    private static final long MODEL_UPDATE_POLL_INTERVAL_MS = 120000L;
 
     public static final String MULTI_LINGUAL_EU_MODEL_FAST = "whisper-base.EUROPEAN_UNION.tflite";
     public static final String MULTI_LINGUAL_TOP_WORLD_FAST = "whisper-base.TOP_WORLD.tflite";
@@ -77,7 +89,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvStatus;
     private EditText tvResult;
     private FloatingActionButton fabCopy;
+    private MaterialButton btnModelUpdate;
     private ImageButton btnRecord;
+    private ImageView ivModelUpdateFlame;
     private LinearLayout layoutModeChinese;
     private LinearLayout layoutTTS;
     private CheckBox append;
@@ -85,7 +99,6 @@ public class MainActivity extends AppCompatActivity {
     private CheckBox modeSimpleChinese;
     private CheckBox modeTTS;
     private ProgressBar processingBar;
-    private ImageButton btnInfo;
     private MaterialButton btnRelogin;
     private TabLayout navigationTabs;
 
@@ -101,9 +114,14 @@ public class MainActivity extends AppCompatActivity {
     private int langToken = -1;
     private long startTime = 0;
     private TextToSpeech tts;
+    private final Handler modelUpdateHandler = new Handler(Looper.getMainLooper());
+    private boolean isCheckingModelUpdate = false;
+    private String availablePublishedVersionTag = "";
+    private final Runnable modelUpdatePollRunnable = this::checkForPublishedModelUpdate;
 
     @Override
     protected void onDestroy() {
+        modelUpdateHandler.removeCallbacks(modelUpdatePollRunnable);
         deinitModel();
         deinitTTS();
         super.onDestroy();
@@ -111,6 +129,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        modelUpdateHandler.removeCallbacks(modelUpdatePollRunnable);
         stopProcessing();
         super.onPause();
     }
@@ -119,6 +138,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         updateAccountButtonText();
+        if (spinnerTflite != null && sdcardDataFolder != null) {
+            refreshModelSpinner(false);
+        }
+        startModelUpdateMonitoring();
         if (navigationTabs != null && navigationTabs.getTabCount() > 0) {
             navigationTabs.getTabAt(0).select();
         }
@@ -132,7 +155,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ThemeUtils.setStatusBarAppearance(this);
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-        checkInputMethodEnabled();
+        checkInputMethodEnabledOncePerProcess();
         processingBar = findViewById(R.id.processing_bar);
         sp = PreferenceManager.getDefaultSharedPreferences(this);
         append = findViewById(R.id.mode_append);
@@ -196,10 +219,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         sdcardDataFolder = this.getExternalFilesDir(null);
-        initModel();
 
-        btnInfo = findViewById(R.id.btnInfo);
-        btnInfo.setOnClickListener(view -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/woheller69/whisperIME#Donate"))));
         btnRelogin = findViewById(R.id.btnRelogin);
         updateAccountButtonText();
         btnRelogin.setOnClickListener(view -> {
@@ -218,12 +238,21 @@ public class MainActivity extends AppCompatActivity {
         langToken = InputLang.getIdForLanguage(InputLang.getLangList(), "zh");
         
         ArrayList<File> tfliteFiles = getFilesWithExtension(sdcardDataFolder, ".tflite");
-        selectedTfliteFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_MODEL_SLOW));
+        File preferredModel = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_MODEL_SLOW));
+        selectedTfliteFile = ModelSelection.resolveSelectedModel(preferredModel, tfliteFiles);
         ArrayAdapter<File> tfliteAdapter = getFileArrayAdapter(tfliteFiles);
-        int position = tfliteAdapter.getPosition(selectedTfliteFile);
         spinnerTflite = findViewById(R.id.spnrTfliteFiles);
         spinnerTflite.setAdapter(tfliteAdapter);
-        spinnerTflite.setSelection(position,false);
+        if (selectedTfliteFile != null) {
+            int position = tfliteAdapter.getPosition(selectedTfliteFile);
+            spinnerTflite.setSelection(Math.max(position, 0), false);
+            SharedPreferences.Editor editor = sp.edit();
+            editor.putString("modelName", selectedTfliteFile.getName());
+            editor.apply();
+        } else {
+            Toast.makeText(this, getString(R.string.error_no_models_available), Toast.LENGTH_SHORT).show();
+            spinnerTflite.setEnabled(false);
+        }
         
         spinnerTflite.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -239,9 +268,14 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnRecord = findViewById(R.id.btnRecord);
+        btnRecord.setEnabled(selectedTfliteFile != null);
         btnRecord.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 runOnUiThread(() -> btnRecord.setBackgroundResource(R.drawable.rounded_button_background_pressed));
+                if (mWhisper == null) {
+                    Toast.makeText(this, getString(R.string.error_no_models_available), Toast.LENGTH_SHORT).show();
+                    return true;
+                }
                 if (!mWhisper.isInProgress()) {
                     HapticFeedback.vibrate(this);
                     startRecording();
@@ -263,6 +297,7 @@ public class MainActivity extends AppCompatActivity {
             }
             return true;
         });
+        initModel();
 
         layoutModeChinese = findViewById(R.id.layout_mode_chinese);
         modeSimpleChinese = findViewById(R.id.mode_simple_chinese);
@@ -291,6 +326,10 @@ public class MainActivity extends AppCompatActivity {
             ClipData clip = ClipData.newPlainText(getString(R.string.model_output), textToCopy);
             clipboard.setPrimaryClip(clip);
         });
+        btnModelUpdate = findViewById(R.id.btnModelUpdate);
+        ivModelUpdateFlame = findViewById(R.id.ivModelUpdateFlame);
+        btnModelUpdate.setOnClickListener(v -> onModelUpdateClicked());
+        updateModelUpdateUi(false);
 
         mRecorder = new Recorder(this);
         mRecorder.setListener(new Recorder.RecorderListener() {
@@ -319,6 +358,13 @@ public class MainActivity extends AppCompatActivity {
         FreeDroidWarn.showWarningOnUpgrade(this, BuildConfig.VERSION_CODE);
         if (GithubStar.shouldShowStarDialog(this)) GithubStar.starDialog(this, "https://github.com/woheller69/whisperIME");
         checkPermissions();
+    }
+
+    private void checkInputMethodEnabledOncePerProcess() {
+        if (!InputMethodPromptGate.consumeShouldPrompt()) {
+            return;
+        }
+        checkInputMethodEnabled();
     }
 
     private void checkInputMethodEnabled() {
@@ -356,7 +402,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initModel() {
-        File modelFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_MODEL_SLOW));
+        if (selectedTfliteFile == null || !selectedTfliteFile.exists()) {
+            Log.e(TAG, "No valid model available for initialization");
+            if (tvStatus != null) {
+                runOnUiThread(() -> tvStatus.setText(getString(R.string.error_no_models_available)));
+            }
+            return;
+        }
+        File modelFile = selectedTfliteFile;
         boolean isMultilingualModel = !(modelFile.getName().endsWith(ENGLISH_ONLY_MODEL_EXTENSION));
         String vocabFileName = isMultilingualModel ? MULTILINGUAL_VOCAB_FILE : ENGLISH_ONLY_VOCAB_FILE;
         File vocabFile = new File(sdcardDataFolder, vocabFileName);
@@ -413,6 +466,7 @@ public class MainActivity extends AppCompatActivity {
                 TextView textView = view.findViewById(android.R.id.text1);
                 String fileName = getItem(position).getName();
                 if (fileName.equals(MULTI_LINGUAL_MODEL_SLOW)) textView.setText(R.string.multi_lingual_default);
+                else if (fileName.equals(PublishedModelSync.PUBLISHED_MODEL_FILE_NAME)) textView.setText(R.string.custom_model);
                 else if (fileName.equals(MULTI_LINGUAL_TOP_WORLD_SLOW)) textView.setText(R.string.multi_lingual_slow);
                 else if (fileName.equals(ENGLISH_ONLY_MODEL)) textView.setText(R.string.english_only_fast);
                 else if (fileName.equals(MULTI_LINGUAL_MODEL_FAST)) textView.setText(R.string.multi_lingual_fast);
@@ -427,6 +481,7 @@ public class MainActivity extends AppCompatActivity {
                 TextView textView = view.findViewById(android.R.id.text1);
                 String fileName = getItem(position).getName();
                 if (fileName.equals(MULTI_LINGUAL_MODEL_SLOW)) textView.setText(R.string.multi_lingual_default);
+                else if (fileName.equals(PublishedModelSync.PUBLISHED_MODEL_FILE_NAME)) textView.setText(R.string.custom_model);
                 else if (fileName.equals(MULTI_LINGUAL_TOP_WORLD_SLOW)) textView.setText(R.string.multi_lingual_slow);
                 else if (fileName.equals(ENGLISH_ONLY_MODEL)) textView.setText(R.string.english_only_fast);
                 else if (fileName.equals(MULTI_LINGUAL_MODEL_FAST)) textView.setText(R.string.multi_lingual_fast);
@@ -500,5 +555,153 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return filteredFiles;
+    }
+
+    private void startModelUpdateMonitoring() {
+        modelUpdateHandler.removeCallbacks(modelUpdatePollRunnable);
+        if (isLoggedIn()) {
+            modelUpdateHandler.post(modelUpdatePollRunnable);
+        } else {
+            availablePublishedVersionTag = "";
+            updateModelUpdateUi(false);
+        }
+    }
+
+    private void scheduleNextModelUpdateCheck() {
+        if (!isFinishing() && !isDestroyed() && isLoggedIn()) {
+            modelUpdateHandler.removeCallbacks(modelUpdatePollRunnable);
+            modelUpdateHandler.postDelayed(modelUpdatePollRunnable, MODEL_UPDATE_POLL_INTERVAL_MS);
+        }
+    }
+
+    private void checkForPublishedModelUpdate() {
+        if (isCheckingModelUpdate || !isLoggedIn()) {
+            scheduleNextModelUpdateCheck();
+            return;
+        }
+        String username = getLoggedInUsername();
+        if (username.isEmpty()) {
+            updateModelUpdateUi(false);
+            scheduleNextModelUpdateCheck();
+            return;
+        }
+        isCheckingModelUpdate = true;
+        new Thread(() -> {
+            try {
+                String url = EndpointConfig.getApiBaseUrl(this) + "/api/latest_model_info?username="
+                        + URLEncoder.encode(username, StandardCharsets.UTF_8.name());
+                HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+                try {
+                    connection.setRequestMethod("GET");
+                    connection.setConnectTimeout(6000);
+                    connection.setReadTimeout(6000);
+                    int code = connection.getResponseCode();
+                    if (code < 200 || code >= 300) {
+                        throw new Exception("HTTP " + code);
+                    }
+                    String raw = readResponse(connection);
+                    JSONObject object = new JSONObject(raw);
+                    boolean hasPublished = object.optBoolean("has_published", false);
+                    String versionTag = object.optString("version_tag", "");
+                    boolean shouldShowUpdate = hasPublished
+                            && !versionTag.isEmpty()
+                            && !PublishedModelSync.isPublishedModelVersionInstalled(
+                                    MainActivity.this,
+                                    sp,
+                                    username,
+                                    versionTag
+                            );
+                    runOnUiThread(() -> {
+                        availablePublishedVersionTag = shouldShowUpdate ? versionTag : "";
+                        updateModelUpdateUi(shouldShowUpdate);
+                    });
+                } finally {
+                    connection.disconnect();
+                }
+            } catch (Exception e) {
+                Log.d(TAG, "Model update check skipped: " + e.getMessage());
+            } finally {
+                isCheckingModelUpdate = false;
+                runOnUiThread(this::scheduleNextModelUpdateCheck);
+            }
+        }).start();
+    }
+
+    private void onModelUpdateClicked() {
+        if (availablePublishedVersionTag.isEmpty()) {
+            return;
+        }
+        String username = getLoggedInUsername();
+        if (username.isEmpty()) {
+            return;
+        }
+        Intent intent = new Intent(this, DownloadActivity.class);
+        intent.putExtra(PublishedModelSync.EXTRA_DOWNLOAD_MODE, PublishedModelSync.DOWNLOAD_MODE_PUBLISHED_MODEL);
+        intent.putExtra(PublishedModelSync.EXTRA_PUBLISHED_MODEL_USERNAME, username);
+        intent.putExtra(PublishedModelSync.EXTRA_PUBLISHED_MODEL_VERSION_TAG, availablePublishedVersionTag);
+        startActivity(intent);
+    }
+
+    private void updateModelUpdateUi(boolean hasUpdate) {
+        if (btnModelUpdate == null || ivModelUpdateFlame == null) {
+            return;
+        }
+        btnModelUpdate.setEnabled(true);
+        if (hasUpdate) {
+            btnModelUpdate.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
+            btnModelUpdate.setText(R.string.model_update_available);
+            btnModelUpdate.setContentDescription(getString(R.string.model_update_ready));
+            ivModelUpdateFlame.setVisibility(View.VISIBLE);
+        } else {
+            btnModelUpdate.setPadding(0, 0, 0, 0);
+            btnModelUpdate.setText("");
+            btnModelUpdate.setContentDescription(getString(R.string.model_update_idle));
+            ivModelUpdateFlame.setVisibility(View.GONE);
+        }
+        btnModelUpdate.requestLayout();
+    }
+
+    private void refreshModelSpinner(boolean preferPublishedModel) {
+        ArrayList<File> tfliteFiles = getFilesWithExtension(sdcardDataFolder, ".tflite");
+        ArrayAdapter<File> adapter = getFileArrayAdapter(tfliteFiles);
+        spinnerTflite.setAdapter(adapter);
+        File preferred = preferPublishedModel ? getPublishedModelFile() : selectedTfliteFile;
+        selectedTfliteFile = ModelSelection.resolveSelectedModel(preferred, tfliteFiles);
+        btnRecord.setEnabled(selectedTfliteFile != null);
+        if (selectedTfliteFile != null) {
+            int position = adapter.getPosition(selectedTfliteFile);
+            spinnerTflite.setSelection(Math.max(position, 0), false);
+            sp.edit().putString("modelName", selectedTfliteFile.getName()).apply();
+            deinitModel();
+            initModel();
+        }
+    }
+
+    private File getPublishedModelFile() {
+        return PublishedModelSync.getPublishedModelFile(this);
+    }
+
+    private String getLoggedInUsername() {
+        if (sp == null) {
+            return "";
+        }
+        String username = sp.getString(PREF_USERNAME, "");
+        return username == null ? "" : username.trim();
+    }
+
+    private String readResponse(HttpURLConnection connection) throws Exception {
+        InputStream stream = connection.getInputStream();
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line);
+            }
+        }
+        return sb.toString();
+    }
+
+    private int dpToPx(int dp) {
+        return Math.round(dp * getResources().getDisplayMetrics().density);
     }
 }

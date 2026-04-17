@@ -171,6 +171,15 @@
             android:layout_weight="1" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_developer_settings"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/dev_settings_entry"
+            android:textColor="@color/text_gray" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/button_update"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="match_parent"

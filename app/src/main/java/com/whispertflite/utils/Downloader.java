@@ -8,6 +8,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.preference.PreferenceManager;
 
 import com.whispertflite.R;
@@ -21,8 +22,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -30,6 +34,12 @@ import java.security.NoSuchAlgorithmException;
 
 @SuppressWarnings("ResultOfMethodCallIgnored")
 public class Downloader {
+    public interface FileDownloadListener {
+        void onProgress(long downloadedBytes, long totalBytes, int percent, boolean indeterminate);
+        void onSuccess(File destination);
+        void onError(String message);
+    }
+
     static final String modelMultiLingualBaseOLD = "whisper-base.tflite"; //Todo Remove ...OLD... stuff later
     static final String modelMultiLingualBaseOLD2 = "whisper-base.EUROPEAN_UNION.tflite"; //Todo Remove ...OLD... stuff later
     static final String modelMultiLingualBase = "whisper-base.TOP_WORLD.tflite";
@@ -42,7 +52,6 @@ public class Downloader {
     
     // Custom Server Constants
     static final String modelCustomName = "whisper-small.tflite";
-    static final String modelCustomURL = "https://modelscope.cn/models/hanxiaofeng218/ASR-Whisper-Small-Model/resolve/master/whisper-small.tflite";
     static String modelCustomMD5 = "c3709c3bf90f76b3a7a2f6291234b490"; 
     
     static final String modelMultiLingualBaseOLDMD5 = "4b4fddfac6a24ffecc4972bc2137ba04";
@@ -58,6 +67,10 @@ public class Downloader {
     static long downloadModelMultiLingualSmallSize = 0L;
     static long downloadModelEnglishOnlySize = 0L;
     static long downloadModelCustomSize = 0L;
+    static long expectedModelMultiLingualBaseSize = modelMultiLingualBaseSize;
+    static long expectedModelMultiLingualSmallSize = modelMultiLingualSmallSize;
+    static long expectedModelEnglishOnlySize = modelEnglishOnlySize;
+    static long expectedModelCustomSize = 150 * 1024 * 1024;
     static boolean modelMultiLingualBaseFinished = false;
     static boolean modelEnglishOnlyFinished = false;
     static boolean modelMultiLingualSmallFinished = false;
@@ -125,7 +138,9 @@ public class Downloader {
                 throw new RuntimeException(e);
             }
         }
-        if (modelMultiLingualSmallOLDFile.exists()) {
+        boolean shouldTreatSmallOldAsLegacy = !modelMultiLingualSmallOLD.equals(modelCustomName);
+
+        if (modelMultiLingualSmallOLDFile.exists() && shouldTreatSmallOldAsLegacy) {
             try {
                 calcModelMultiLingualSmallOLDMD5 = calculateMD5(String.valueOf(Paths.get(modelMultiLingualSmallOLDFile.getPath())));
             } catch (IOException | NoSuchAlgorithmException e) {
@@ -139,7 +154,9 @@ public class Downloader {
                 throw new RuntimeException(e);
             }
         }
-        if (modelCustomFile.exists()) {
+        boolean shouldValidateCustomModelMd5 = DOWNLOAD_HF_MODELS;
+
+        if (modelCustomFile.exists() && shouldValidateCustomModelMd5) {
             try {
                 calcModelCustomMD5 = calculateMD5(String.valueOf(Paths.get(modelCustomFile.getPath())));
             } catch (IOException | NoSuchAlgorithmException e) {
@@ -149,14 +166,18 @@ public class Downloader {
 
         if (modelMultiLingualBaseOLDFile.exists() && !(calcModelMultiLingualBaseOLDMD5.equals(modelMultiLingualBaseOLDMD5))) { modelMultiLingualBaseOLDFile.delete();}
         if (modelMultiLingualBaseOLD2File.exists() && !(calcModelMultiLingualBaseOLD2MD5.equals(modelMultiLingualBaseOLD2MD5))) { modelMultiLingualBaseOLD2File.delete();}
-        if (modelMultiLingualSmallOLDFile.exists() && !(calcModelMultiLingualSmallOLDMD5.equals(modelMultiLingualSmallOLDMD5))) { modelMultiLingualSmallOLDFile.delete();}
+        if (modelMultiLingualSmallOLDFile.exists() && shouldTreatSmallOldAsLegacy && !(calcModelMultiLingualSmallOLDMD5.equals(modelMultiLingualSmallOLDMD5))) { modelMultiLingualSmallOLDFile.delete();}
         if (modelMultiLingualBaseFile.exists() && !(calcModelMultiLingualBaseMD5.equals(modelMultiLingualBaseMD5))) { modelMultiLingualBaseFile.delete(); modelMultiLingualBaseFinished = false;}
         if (modelMultiLingualSmallFile.exists() && !(calcModelMultiLingualSmallMD5.equals(modelMultiLingualSmallMD5))) { modelMultiLingualSmallFile.delete(); modelMultiLingualSmallFinished = false;}
         if (modelEnglishOnlyFile.exists() && !calcModelEnglishOnlyMD5.equals(modelEnglishOnlyMD5)) { modelEnglishOnlyFile.delete(); modelEnglishOnlyFinished = false; }
-        if (modelCustomFile.exists() && !calcModelCustomMD5.equals(modelCustomMD5)) { modelCustomFile.delete(); modelCustomFinished = false; }
+        if (modelCustomFile.exists() && shouldValidateCustomModelMd5 && !calcModelCustomMD5.equals(modelCustomMD5)) { modelCustomFile.delete(); modelCustomFinished = false; }
 
-        boolean hfModelsOk = !DOWNLOAD_HF_MODELS || (calcModelMultiLingualSmallMD5.equals(modelMultiLingualSmallMD5) || calcModelMultiLingualSmallOLDMD5.equals(modelMultiLingualSmallOLDMD5)) && (calcModelMultiLingualBaseMD5.equals(modelMultiLingualBaseMD5) || calcModelMultiLingualBaseOLDMD5.equals(modelMultiLingualBaseOLDMD5) || calcModelMultiLingualBaseOLD2MD5.equals(modelMultiLingualBaseOLD2MD5)) && calcModelEnglishOnlyMD5.equals(modelEnglishOnlyMD5);
-        boolean customModelOk = calcModelCustomMD5.equals(modelCustomMD5);
+        boolean hasValidSlowModel = calcModelMultiLingualSmallMD5.equals(modelMultiLingualSmallMD5)
+                || (shouldTreatSmallOldAsLegacy && calcModelMultiLingualSmallOLDMD5.equals(modelMultiLingualSmallOLDMD5));
+        boolean hfModelsOk = !DOWNLOAD_HF_MODELS || hasValidSlowModel
+                && (calcModelMultiLingualBaseMD5.equals(modelMultiLingualBaseMD5) || calcModelMultiLingualBaseOLDMD5.equals(modelMultiLingualBaseOLDMD5) || calcModelMultiLingualBaseOLD2MD5.equals(modelMultiLingualBaseOLD2MD5))
+                && calcModelEnglishOnlyMD5.equals(modelEnglishOnlyMD5);
+        boolean customModelOk = modelCustomFile.exists() && (!shouldValidateCustomModelMd5 || calcModelCustomMD5.equals(modelCustomMD5));
 
         if (customModelOk) modelCustomFinished = true;
         if (!DOWNLOAD_HF_MODELS) {
@@ -178,7 +199,9 @@ public class Downloader {
         File modelMultiLingualBaseOLD2File = new File(activity.getExternalFilesDir(null) + "/" + modelMultiLingualBaseOLD2);
         if (modelMultiLingualBaseOLD2File.exists()) modelMultiLingualBaseOLD2File.delete();
         File modelMultiLingualSmallOLDFile = new File(activity.getExternalFilesDir(null) + "/" + modelMultiLingualSmallOLD);
-        if (modelMultiLingualSmallOLDFile.exists()) modelMultiLingualSmallOLDFile.delete();
+        if (modelMultiLingualSmallOLDFile.exists() && !modelMultiLingualSmallOLD.equals(modelCustomName)) {
+            modelMultiLingualSmallOLDFile.delete();
+        }
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(activity);
         sp.edit().remove("modelName").apply();
         sp.edit().remove("recognitionServiceModelName").apply();
@@ -189,8 +212,13 @@ public class Downloader {
 
         binding.downloadProgress.setProgress(0);
         binding.downloadButton.setEnabled(false);
+        Thread setupThread = new Thread(() -> {
+            String customModelUrl = EndpointConfig.getCustomModelUrl(activity);
+            initializeExpectedSizes(activity);
+            initializeDownloadedSizes(activity);
+            updateDownloadProgress(activity, binding);
 
-        if (DOWNLOAD_HF_MODELS) {
+            if (DOWNLOAD_HF_MODELS) {
             File modelMultiLingualBaseFile = new File(activity.getExternalFilesDir(null)+ "/" + modelMultiLingualBase);
             if (!modelMultiLingualBaseFile.exists()) {
                 modelMultiLingualBaseFinished = false;
@@ -216,10 +244,7 @@ public class Downloader {
                         while ((len = inStream.read(buff)) != -1) {
                             outStream.write(buff, 0, len);
                             if (modelMultiLingualBaseFile.exists()) downloadModelMultiLingualBaseSize = modelMultiLingualBaseFile.length();
-                            activity.runOnUiThread(() -> {
-                                binding.downloadSize.setText((downloadModelEnglishOnlySize + downloadModelMultiLingualSmallSize + downloadModelMultiLingualBaseSize + downloadModelCustomSize)/1024/1024 + " MB");
-                                binding.downloadProgress.setProgress((int) (((double)(downloadModelEnglishOnlySize + downloadModelMultiLingualSmallSize + downloadModelMultiLingualBaseSize + downloadModelCustomSize) / (modelEnglishOnlySize + modelMultiLingualSmallSize +  modelMultiLingualBaseSize + 150*1024*1024)) * 100));
-                            });
+                            updateDownloadProgress(activity, binding);
                         }
                         outStream.flush();
                         outStream.close();
@@ -257,6 +282,7 @@ public class Downloader {
             } else {
                 downloadModelMultiLingualBaseSize = modelMultiLingualBaseSize;
                 modelMultiLingualBaseFinished = true;
+                updateDownloadProgress(activity, binding);
                 activity.runOnUiThread(() -> {
                     if (modelEnglishOnlyFinished && modelMultiLingualSmallFinished && modelMultiLingualBaseFinished && modelCustomFinished) binding.buttonStart.setVisibility(View.VISIBLE);
                 });
@@ -287,10 +313,7 @@ public class Downloader {
                         while ((len = inStream.read(buff)) != -1) {
                             outStream.write(buff, 0, len);
                             if (modelMultiLingualSmallFile.exists()) downloadModelMultiLingualSmallSize = modelMultiLingualSmallFile.length();
-                            activity.runOnUiThread(() -> {
-                                binding.downloadSize.setText((downloadModelEnglishOnlySize + downloadModelMultiLingualSmallSize + downloadModelMultiLingualBaseSize + downloadModelCustomSize)/1024/1024 + " MB");
-                                binding.downloadProgress.setProgress((int) (((double)(downloadModelEnglishOnlySize + downloadModelMultiLingualSmallSize + downloadModelMultiLingualBaseSize + downloadModelCustomSize) / (modelEnglishOnlySize + modelMultiLingualSmallSize + modelMultiLingualBaseSize + 150*1024*1024)) * 100));
-                            });
+                            updateDownloadProgress(activity, binding);
                         }
                         outStream.flush();
                         outStream.close();
@@ -328,6 +351,7 @@ public class Downloader {
             } else {
                 downloadModelMultiLingualSmallSize = modelMultiLingualSmallSize;
                 modelMultiLingualSmallFinished = true;
+                updateDownloadProgress(activity, binding);
                 activity.runOnUiThread(() -> {
                     if (modelEnglishOnlyFinished && modelMultiLingualSmallFinished && modelMultiLingualBaseFinished && modelCustomFinished) binding.buttonStart.setVisibility(View.VISIBLE);
                 });
@@ -358,10 +382,7 @@ public class Downloader {
                         while ((len = inStream.read(buff)) != -1) {
                             outStream.write(buff, 0, len);
                             if (modelEnglishOnlyFile.exists()) downloadModelEnglishOnlySize = modelEnglishOnlyFile.length();
-                            activity.runOnUiThread(() -> {
-                                binding.downloadSize.setText((downloadModelEnglishOnlySize + downloadModelMultiLingualSmallSize + downloadModelMultiLingualBaseSize + downloadModelCustomSize)/1024/1024 + " MB");
-                                binding.downloadProgress.setProgress((int) (((double)(downloadModelEnglishOnlySize + downloadModelMultiLingualSmallSize + downloadModelMultiLingualBaseSize + downloadModelCustomSize) / (modelEnglishOnlySize + modelMultiLingualSmallSize +  modelMultiLingualBaseSize + 150*1024*1024)) * 100));
-                            });
+                            updateDownloadProgress(activity, binding);
                         }
                         outStream.flush();
                         outStream.close();
@@ -400,6 +421,7 @@ public class Downloader {
             } else {
                 downloadModelEnglishOnlySize = modelEnglishOnlySize;
                 modelEnglishOnlyFinished = true;
+                updateDownloadProgress(activity, binding);
                 activity.runOnUiThread(() -> {
                     if (modelEnglishOnlyFinished && modelMultiLingualSmallFinished && modelMultiLingualBaseFinished && modelCustomFinished) binding.buttonStart.setVisibility(View.VISIBLE);
                 });
@@ -415,10 +437,10 @@ public class Downloader {
         if (!modelCustomFile.exists()) {
             modelCustomFinished = false;
             Log.d("WhisperASR", "Custom model file does not exist");
-            Thread thread = new Thread(() -> {
-                try {
-                    URL url = new URL(modelCustomURL);
-                    Log.d("WhisperASR", "Download Custom model: " + modelCustomURL);
+                Thread thread = new Thread(() -> {
+                    try {
+                    URL url = new URL(customModelUrl);
+                    Log.d("WhisperASR", "Download Custom model: " + customModelUrl);
 
                     URLConnection ucon = url.openConnection();
                     ucon.setReadTimeout(5000);
@@ -436,12 +458,7 @@ public class Downloader {
                     while ((len = inStream.read(buff)) != -1) {
                         outStream.write(buff, 0, len);
                         if (modelCustomFile.exists()) downloadModelCustomSize = modelCustomFile.length();
-                        activity.runOnUiThread(() -> {
-                            long totalDownloaded = (DOWNLOAD_HF_MODELS ? (downloadModelEnglishOnlySize + downloadModelMultiLingualSmallSize + downloadModelMultiLingualBaseSize) : 0) + downloadModelCustomSize;
-                            binding.downloadSize.setText(totalDownloaded/1024/1024 + " MB");
-                            long totalExpected = (DOWNLOAD_HF_MODELS ? (modelEnglishOnlySize + modelMultiLingualSmallSize + modelMultiLingualBaseSize) : 0) + 150*1024*1024;
-                            binding.downloadProgress.setProgress((int) (((double)totalDownloaded / totalExpected) * 100));
-                        });
+                        updateDownloadProgress(activity, binding);
                     }
                     outStream.flush();
                     outStream.close();
@@ -477,9 +494,307 @@ public class Downloader {
             thread.start();
         } else {
             modelCustomFinished = true;
+            updateDownloadProgress(activity, binding);
             activity.runOnUiThread(() -> {
                 if (modelEnglishOnlyFinished && modelMultiLingualSmallFinished && modelMultiLingualBaseFinished && modelCustomFinished) notifyDownloadFinished(activity, binding);
             });
+        }
+        });
+        setupThread.start();
+    }
+
+    public static void downloadFileAsync(Context context, String fileUrl, File destination, FileDownloadListener listener) {
+        Thread downloadThread = new Thread(() -> {
+            HttpURLConnection connection = null;
+            File tempFile = new File(destination.getAbsolutePath() + ".download");
+            try {
+                URL url = new URL(fileUrl);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(15000);
+                connection.connect();
+
+                int responseCode = connection.getResponseCode();
+                if (responseCode < 200 || responseCode >= 300) {
+                    throw new IOException("HTTP " + responseCode);
+                }
+                long totalBytes = connection.getContentLengthLong();
+                boolean indeterminate = totalBytes <= 0;
+                listener.onProgress(0L, totalBytes, 0, indeterminate);
+
+                File parent = destination.getParentFile();
+                if (parent != null && !parent.exists()) {
+                    parent.mkdirs();
+                }
+                if (tempFile.exists()) {
+                    tempFile.delete();
+                }
+
+                try (InputStream inputStream = new BufferedInputStream(connection.getInputStream(), 1024 * 5);
+                     OutputStream outputStream = new FileOutputStream(tempFile)) {
+                    byte[] buffer = new byte[8 * 1024];
+                    int len;
+                    long downloadedBytes = 0L;
+                    while ((len = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, len);
+                        downloadedBytes += len;
+                        if (!indeterminate && totalBytes > 0) {
+                            int percent = (int) Math.min(100L, (downloadedBytes * 100L) / totalBytes);
+                            listener.onProgress(downloadedBytes, totalBytes, percent, false);
+                        } else {
+                            listener.onProgress(downloadedBytes, totalBytes, 0, true);
+                        }
+                    }
+                    outputStream.flush();
+                }
+
+                if (destination.exists() && !destination.delete()) {
+                    throw new IOException("无法替换旧模型文件");
+                }
+                if (!tempFile.renameTo(destination)) {
+                    throw new IOException("无法写入模型文件");
+                }
+                listener.onProgress(totalBytes > 0 ? totalBytes : destination.length(), totalBytes, 100, false);
+                listener.onSuccess(destination);
+            } catch (Exception e) {
+                Log.w("WhisperASR", "Error downloading file: " + fileUrl, e);
+                if (tempFile.exists()) {
+                    tempFile.delete();
+                }
+                String message = e.getMessage() == null ? context.getString(R.string.error_download) : e.getMessage();
+                listener.onError(message);
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+        });
+        downloadThread.start();
+    }
+
+    public static void downloadPublishedModel(
+            @NonNull Activity activity,
+            ActivityDownloadBinding binding,
+            @NonNull String username,
+            @NonNull String versionTag
+    ) {
+        binding.downloadProgress.setProgress(0);
+        binding.downloadProgress.setIndeterminate(true);
+        binding.downloadButton.setEnabled(false);
+        binding.downloadButton.setClickable(false);
+        binding.downloadSize.setText(activity.getString(R.string.please_wait));
+
+        String fileUrl = EndpointConfig.getApiBaseUrl(activity) + "/api/download_published_model?username="
+                + URLEncoder.encode(username, StandardCharsets.UTF_8);
+        File destination = PublishedModelSync.getPublishedModelFile(activity);
+        SharedPreferences preferences = PublishedModelSync.getPreferences(activity);
+
+        downloadFileAsync(activity, fileUrl, destination, new FileDownloadListener() {
+            @Override
+            public void onProgress(long downloadedBytes, long totalBytes, int percent, boolean indeterminate) {
+                activity.runOnUiThread(() -> {
+                    binding.downloadProgress.setVisibility(View.VISIBLE);
+                    binding.downloadSize.setVisibility(View.VISIBLE);
+                    binding.downloadProgress.setIndeterminate(indeterminate);
+                    if (!indeterminate) {
+                        binding.downloadProgress.setProgress(percent);
+                        binding.downloadSize.setText(activity.getString(
+                                R.string.download_progress_bytes,
+                                downloadedBytes / 1024 / 1024,
+                                totalBytes / 1024 / 1024
+                        ));
+                    } else {
+                        binding.downloadSize.setText(activity.getString(
+                                R.string.download_progress_downloaded_only,
+                                downloadedBytes / 1024 / 1024
+                        ));
+                    }
+                });
+            }
+
+            @Override
+            public void onSuccess(File file) {
+                if (!versionTag.trim().isEmpty()) {
+                    PublishedModelSync.setDownloadedPublishedVersionTag(preferences, username, versionTag);
+                }
+                activity.runOnUiThread(() -> {
+                    binding.circularLoading.setVisibility(View.GONE);
+                    binding.downloadProgress.setIndeterminate(false);
+                    binding.downloadProgress.setProgress(100);
+                    notifyDownloadFinished(activity, binding);
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                activity.runOnUiThread(() -> {
+                    binding.circularLoading.setVisibility(View.GONE);
+                    binding.downloadButton.setVisibility(View.VISIBLE);
+                    binding.downloadButton.setEnabled(true);
+                    binding.downloadButton.setClickable(true);
+                    binding.downloadProgress.setIndeterminate(false);
+                    binding.downloadProgress.setProgress(0);
+                    binding.downloadProgress.setVisibility(View.GONE);
+                    binding.downloadSize.setVisibility(View.GONE);
+                    Toast.makeText(
+                            activity,
+                            activity.getString(R.string.model_update_download_failed, message),
+                            Toast.LENGTH_SHORT
+                    ).show();
+                });
+            }
+        });
+    }
+
+    private static void initializeExpectedSizes(Activity activity) {
+        if (DOWNLOAD_HF_MODELS) {
+            File modelMultiLingualBaseFile = new File(activity.getExternalFilesDir(null) + "/" + modelMultiLingualBase);
+            File modelMultiLingualSmallFile = new File(activity.getExternalFilesDir(null) + "/" + modelMultiLingualSmall);
+            File modelEnglishOnlyFile = new File(activity.getExternalFilesDir(null) + "/" + modelEnglishOnly);
+
+            expectedModelMultiLingualBaseSize = resolveExpectedSize(
+                    modelMultiLingualBaseFile,
+                    probeRemoteFileSize(modelMultiLingualBaseURL),
+                    modelMultiLingualBaseSize
+            );
+            expectedModelMultiLingualSmallSize = resolveExpectedSize(
+                    modelMultiLingualSmallFile,
+                    probeRemoteFileSize(modelMultiLingualSmallURL),
+                    modelMultiLingualSmallSize
+            );
+            expectedModelEnglishOnlySize = resolveExpectedSize(
+                    modelEnglishOnlyFile,
+                    probeRemoteFileSize(modelEnglishOnlyURL),
+                    modelEnglishOnlySize
+            );
+        } else {
+            expectedModelMultiLingualBaseSize = 0L;
+            expectedModelMultiLingualSmallSize = 0L;
+            expectedModelEnglishOnlySize = 0L;
+        }
+
+        File modelCustomFile = new File(activity.getExternalFilesDir(null) + "/" + modelCustomName);
+        expectedModelCustomSize = resolveExpectedSize(
+                modelCustomFile,
+                probeRemoteFileSize(EndpointConfig.getCustomModelUrl(activity)),
+                150 * 1024 * 1024
+        );
+    }
+
+    private static void initializeDownloadedSizes(Activity activity) {
+        if (DOWNLOAD_HF_MODELS) {
+            File modelMultiLingualBaseFile = new File(activity.getExternalFilesDir(null) + "/" + modelMultiLingualBase);
+            File modelMultiLingualSmallFile = new File(activity.getExternalFilesDir(null) + "/" + modelMultiLingualSmall);
+            File modelEnglishOnlyFile = new File(activity.getExternalFilesDir(null) + "/" + modelEnglishOnly);
+            downloadModelMultiLingualBaseSize = modelMultiLingualBaseFile.exists() ? modelMultiLingualBaseFile.length() : 0L;
+            downloadModelMultiLingualSmallSize = modelMultiLingualSmallFile.exists() ? modelMultiLingualSmallFile.length() : 0L;
+            downloadModelEnglishOnlySize = modelEnglishOnlyFile.exists() ? modelEnglishOnlyFile.length() : 0L;
+        } else {
+            downloadModelMultiLingualBaseSize = 0L;
+            downloadModelMultiLingualSmallSize = 0L;
+            downloadModelEnglishOnlySize = 0L;
+        }
+
+        File modelCustomFile = new File(activity.getExternalFilesDir(null) + "/" + modelCustomName);
+        downloadModelCustomSize = modelCustomFile.exists() ? modelCustomFile.length() : 0L;
+    }
+
+    private static void updateDownloadProgress(Activity activity, ActivityDownloadBinding binding) {
+        activity.runOnUiThread(() -> {
+            long totalDownloaded = getTotalDownloadedBytes();
+            long totalExpected = getTotalExpectedBytes();
+            binding.downloadSize.setText(totalDownloaded / 1024 / 1024 + " MB");
+            binding.downloadProgress.setProgress(calculateProgressPercent(totalDownloaded, totalExpected));
+        });
+    }
+
+    private static long getTotalDownloadedBytes() {
+        return downloadModelEnglishOnlySize
+                + downloadModelMultiLingualSmallSize
+                + downloadModelMultiLingualBaseSize
+                + downloadModelCustomSize;
+    }
+
+    private static long getTotalExpectedBytes() {
+        return expectedModelEnglishOnlySize
+                + expectedModelMultiLingualSmallSize
+                + expectedModelMultiLingualBaseSize
+                + expectedModelCustomSize;
+    }
+
+    static long resolveExpectedSize(File localFile, long remoteSize, long fallbackSize) {
+        if (localFile.exists() && localFile.length() > 0) {
+            return localFile.length();
+        }
+        if (remoteSize > 0) {
+            return remoteSize;
+        }
+        return fallbackSize;
+    }
+
+    static int calculateProgressPercent(long downloadedBytes, long expectedBytes) {
+        if (expectedBytes <= 0) {
+            return 0;
+        }
+        int progress = (int) ((downloadedBytes * 100) / expectedBytes);
+        return Math.min(progress, 100);
+    }
+
+    private static long probeRemoteFileSize(String fileUrl) {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL(fileUrl).openConnection();
+            connection.setRequestMethod("HEAD");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(5000);
+            connection.connect();
+            long size = connection.getContentLengthLong();
+            if (size > 0) {
+                return size;
+            }
+        } catch (IOException e) {
+            Log.w("WhisperASR", "Unable to probe file size via HEAD: " + fileUrl, e);
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+
+        connection = null;
+        try {
+            connection = (HttpURLConnection) new URL(fileUrl).openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Range", "bytes=0-0");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(5000);
+            connection.connect();
+            long size = parseContentRangeTotalSize(connection.getHeaderField("Content-Range"));
+            if (size > 0) {
+                return size;
+            }
+        } catch (IOException e) {
+            Log.w("WhisperASR", "Unable to probe file size via GET: " + fileUrl, e);
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+        return -1L;
+    }
+
+    private static long parseContentRangeTotalSize(String contentRange) {
+        if (contentRange == null) {
+            return -1L;
+        }
+        int slashIndex = contentRange.lastIndexOf('/');
+        if (slashIndex < 0 || slashIndex >= contentRange.length() - 1) {
+            return -1L;
+        }
+        try {
+            return Long.parseLong(contentRange.substring(slashIndex + 1));
+        } catch (NumberFormatException ignored) {
+            return -1L;
         }
     }
 
