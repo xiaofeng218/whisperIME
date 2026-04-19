@@ -47,14 +47,12 @@ import com.google.android.material.tabs.TabLayout;
 import com.whispertflite.asr.Recorder;
 import com.whispertflite.asr.Whisper;
 import com.whispertflite.asr.WhisperResult;
-import com.whispertflite.utils.EndpointConfig;
 import com.whispertflite.utils.HapticFeedback;
 import com.whispertflite.utils.InputLang;
 import com.whispertflite.utils.ModelSelection;
 import com.whispertflite.utils.PublishedModelSync;
 import com.whispertflite.utils.ThemeUtils;
 
-import org.json.JSONObject;
 import org.woheller69.freeDroidWarn.FreeDroidWarn;
 
 import java.io.BufferedReader;
@@ -63,7 +61,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -588,23 +585,26 @@ public class MainActivity extends AppCompatActivity {
         isCheckingModelUpdate = true;
         new Thread(() -> {
             try {
-                String url = EndpointConfig.getApiBaseUrl(this) + "/api/latest_model_info?username="
-                        + URLEncoder.encode(username, StandardCharsets.UTF_8.name());
+                String url = PublishedModelSync.getModelScopeVersionInfoUrl(username);
                 HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
                 try {
                     connection.setRequestMethod("GET");
                     connection.setConnectTimeout(6000);
                     connection.setReadTimeout(6000);
                     int code = connection.getResponseCode();
+                    if (code == HttpURLConnection.HTTP_NOT_FOUND) {
+                        runOnUiThread(() -> {
+                            availablePublishedVersionTag = "";
+                            updateModelUpdateUi(false);
+                        });
+                        return;
+                    }
                     if (code < 200 || code >= 300) {
                         throw new Exception("HTTP " + code);
                     }
                     String raw = readResponse(connection);
-                    JSONObject object = new JSONObject(raw);
-                    boolean hasPublished = object.optBoolean("has_published", false);
-                    String versionTag = object.optString("version_tag", "");
-                    boolean shouldShowUpdate = hasPublished
-                            && !versionTag.isEmpty()
+                    String versionTag = PublishedModelSync.extractVersionTag(raw);
+                    boolean shouldShowUpdate = !versionTag.isEmpty()
                             && !PublishedModelSync.isPublishedModelVersionInstalled(
                                     MainActivity.this,
                                     sp,
@@ -647,17 +647,29 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         btnModelUpdate.setEnabled(true);
+        ViewGroup.LayoutParams layoutParams = btnModelUpdate.getLayoutParams();
         if (hasUpdate) {
-            btnModelUpdate.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
+            layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+            layoutParams.height = dpToPx(56);
+            btnModelUpdate.setMinWidth(dpToPx(96));
+            btnModelUpdate.setMinHeight(dpToPx(56));
+            btnModelUpdate.setPadding(dpToPx(16), 0, dpToPx(16), 0);
+            btnModelUpdate.setIconPadding(dpToPx(6));
             btnModelUpdate.setText(R.string.model_update_available);
             btnModelUpdate.setContentDescription(getString(R.string.model_update_ready));
             ivModelUpdateFlame.setVisibility(View.VISIBLE);
         } else {
+            layoutParams.width = dpToPx(56);
+            layoutParams.height = dpToPx(56);
+            btnModelUpdate.setMinWidth(dpToPx(56));
+            btnModelUpdate.setMinHeight(dpToPx(56));
             btnModelUpdate.setPadding(0, 0, 0, 0);
+            btnModelUpdate.setIconPadding(0);
             btnModelUpdate.setText("");
             btnModelUpdate.setContentDescription(getString(R.string.model_update_idle));
             ivModelUpdateFlame.setVisibility(View.GONE);
         }
+        btnModelUpdate.setLayoutParams(layoutParams);
         btnModelUpdate.requestLayout();
     }
 

@@ -25,8 +25,6 @@ import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -585,8 +583,7 @@ public class Downloader {
         binding.downloadButton.setClickable(false);
         binding.downloadSize.setText(activity.getString(R.string.please_wait));
 
-        String fileUrl = EndpointConfig.getApiBaseUrl(activity) + "/api/download_published_model?username="
-                + URLEncoder.encode(username, StandardCharsets.UTF_8);
+        String fileUrl = PublishedModelSync.getModelScopePublishedModelUrl(username);
         File destination = PublishedModelSync.getPublishedModelFile(activity);
         SharedPreferences preferences = PublishedModelSync.getPreferences(activity);
 
