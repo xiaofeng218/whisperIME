@@ -3,6 +3,15 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+def quoteBuildConfigString = { value ->
+    return '"' + value.toString()
+            .replace('\\', '\\\\')
+            .replace('"', '\\"') + '"'
+}
+
+def defaultServerBaseUrl = project.findProperty("DEFAULT_SERVER_BASE_URL") ?: "http://43.143.17.185:8000"
+def defaultCustomModelUrl = project.findProperty("DEFAULT_CUSTOM_MODEL_URL") ?: "https://modelscope.cn/models/hanxiaofeng218/ASR-Whisper-Small-Model/resolve/master/whisper-small.tflite"
+
 android {
     namespace 'com.whispertflite'
     compileSdk 35
@@ -17,6 +26,8 @@ android {
         targetSdk 35
         versionCode 36
         versionName "3.6"
+        buildConfigField "String", "DEFAULT_SERVER_BASE_URL", quoteBuildConfigString(defaultServerBaseUrl)
+        buildConfigField "String", "DEFAULT_CUSTOM_MODEL_URL", quoteBuildConfigString(defaultCustomModelUrl)
 
     }
 
@@ -67,4 +78,6 @@ dependencies {
     implementation 'com.github.gkonovalov.android-vad:webrtc:2.0.9'
     implementation 'com.github.houbb:opencc4j:1.8.1'
     implementation 'com.github.woheller69:FreeDroidWarn:+'
+
+    testImplementation 'junit:junit:4.13.2'
 }

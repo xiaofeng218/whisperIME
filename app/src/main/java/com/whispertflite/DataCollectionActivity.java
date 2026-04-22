@@ -28,6 +28,7 @@ import com.google.android.material.tabs.TabLayout;
 import com.whispertflite.asr.RecordBuffer;
 import com.whispertflite.asr.Recorder;
 import com.whispertflite.utils.HapticFeedback;
+import com.whispertflite.utils.EndpointConfig;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -58,7 +59,6 @@ import java.util.concurrent.Executors;
 public class DataCollectionActivity extends AppCompatActivity {
     private static final String TAG = "DataCollectionActivity";
     private static final String TASKS_FILE_NAME = "tasks.txt";
-    private static final String SERVER_BASE_URL = "http://43.143.17.185:8000";
     private static final String PREF_USERNAME = "collector_username";
 
     private List<String> mTargetPhrases = new ArrayList<>();
@@ -275,7 +275,8 @@ public class DataCollectionActivity extends AppCompatActivity {
         setUploadingState(true);
         tvCollectionStatus.setText(getString(R.string.collection_connecting));
         mNetworkExecutor.execute(() -> {
-            SyncResult syncResult = syncServerTasks(SERVER_BASE_URL, mUsername);
+            String baseUrl = EndpointConfig.getApiBaseUrl(this);
+            SyncResult syncResult = syncServerTasks(baseUrl, mUsername);
             if (!syncResult.success) {
                 runOnUiThread(() -> {
                     setUploadingState(false);
@@ -284,7 +285,7 @@ public class DataCollectionActivity extends AppCompatActivity {
                 return;
             }
 
-            UploadSummary summary = uploadAllRecordings(SERVER_BASE_URL, mUsername);
+            UploadSummary summary = uploadAllRecordings(baseUrl, mUsername);
             runOnUiThread(() -> {
                 setUploadingState(false);
                 String resultMsg = getString(
